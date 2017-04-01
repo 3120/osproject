@@ -12,7 +12,7 @@ Node* node_create() {
 }
 
 Node* node_init(RCB *rcb) {
-    Node *new = node_new();
+    Node *new = node_create();
     new->next = NULL;
     new->rcb = rcb;
     return new;

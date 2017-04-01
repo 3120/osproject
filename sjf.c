@@ -1,7 +1,9 @@
 #include "sjf.h"
 
+Queue *queue;
+
 void sjf_loop() {
-	Queue *queue = queue_init();
+    queue_init(queue);
 
 	for(;;) {
 		network_wait();
@@ -19,7 +21,7 @@ void sjf_loop() {
             
             /* Clean up request */
 			node_destroy(first);
-		} while (!list_is_empty(queue));
+		} while (!queue_is_empty(queue));
 		printf("Queue is empty! Sleeping now.\n");
 	}
 }

@@ -4,14 +4,14 @@
 Queue* queue_init() {
 	Queue *new_queue = malloc(sizeof(Queue));
 
-	if (queue) {
-		queue->head = queue->cursor = NULL;
+	if (new_queue) {
+		new_queue->head = NULL;
 	} else {
 		perror("Error while allocating memory");
 		abort();
 	}
 
-	return queue;
+	return new_queue;
 }
 
 void queue_destroy(Queue *victim) {
@@ -19,9 +19,9 @@ void queue_destroy(Queue *victim) {
 		return;
 	}
 
-	node *current = victim->head;
+	Node *current = victim->head;
 	while (current) {
-		node *next = current->next;
+		Node *next = current->next;
 		/* Destroy the RCB */
 		free(current);
 		current = next;
@@ -33,13 +33,12 @@ void queue_destroy(Queue *victim) {
 void queue_enqueue(Queue *queue, RCB *rcb) {
 	if (!queue || !rcb) return;
 
-	node *new_node = node_init(rcb);
+	Node *new_node = node_init(rcb);
 
 	if (queue_is_empty(queue)) {
 		queue->head = new_node;
-		queue->cursor = new_node;
 	} else {
-		node *current_end = queue->head;
+		Node *current_end = queue->head;
 		while (current_end->next) {
 			current_end = current_end->next;
 		}
@@ -50,7 +49,7 @@ void queue_enqueue(Queue *queue, RCB *rcb) {
 bool queue_enqueue_priority(Queue *queue, RCB *rcb) {
 	if (!queue || !rcb) return false;
 
-	node *new = node_init(rcb);
+	Node *new = node_init(rcb);
 
 	/* If queue is empty, add new as first element */
 	if (queue->head == NULL) {
@@ -61,8 +60,8 @@ bool queue_enqueue_priority(Queue *queue, RCB *rcb) {
 	/* If queue is not empty, find the first element which is larger than
 	 * the new node's file. Add the new node directly before that element.
 	 */
-	node *comparison = queue->head;
-	node *prev = NULL;
+	Node *comparison = queue->head;
+	Node *prev = NULL;
 	while (comparison != NULL) {
 		if (rcb->bytes_unsent >= comparison->rcb->bytes_unsent) {
 			prev = comparison;
@@ -72,7 +71,7 @@ bool queue_enqueue_priority(Queue *queue, RCB *rcb) {
 			if (prev == NULL) {
 				queue->head = new;
 			} else {
-				queue->next = new;
+				prev->next = new;
 			}
 			return true;
 		}
@@ -89,10 +88,10 @@ bool queue_enqueue_priority(Queue *queue, RCB *rcb) {
 	return false;
 }
 
-node* queue_dequeue(Queue *queue) {
+Node* queue_dequeue(Queue *queue) {
 	if (!queue || queue->head == NULL) return NULL;
 
-	node *pop = queue->head;
+	Node *pop = queue->head;
 	queue->head = queue->head->next;
 	return pop;
 }

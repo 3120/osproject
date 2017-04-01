@@ -45,7 +45,7 @@ int main( int argc, char **argv ) {
   } else if (strcmp(flag, "RR") == 0) {
     scheduler_loop = &rr_loop;
   } else if (strcmp(flag, "MLFB") == 0) {
-    scheduler_loop = &mlfb_loop;
+    /* scheduler_loop = &mlfb_loop; */
   } else {
     printf("Valid schedulers are SJF/RR/MLFB\n");
     return 0;
