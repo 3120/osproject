@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "http.h"
 
 typedef struct {
 	int client_connection;
@@ -10,10 +14,11 @@ typedef struct {
 	unsigned long bytes_unsent;
 } RCB;
 
-RCB* rcb_init(int client_connection, FILE *file);
+RCB* rcb_init(int client_connection);
+bool rcb_process(RCB *rcb);
 unsigned long rcb_get_filesize(FILE *file);
 void rcb_update_record(RCB *rcb, int sent);
-void rcb_destroy(RCB *rcb);
 bool rcb_completed(RCB *rcb);
+void rcb_destroy(RCB *rcb);
 
 #endif
