@@ -1,33 +1,10 @@
 #include "sjf.h"
 
-Queue *queue;
-
-void sjf_loop() {
-    queue_init(queue);
-
-	for(;;) {
-		network_wait();
-
-		do {
-			/* Process next in queue completely */
-			Node *first = queue_dequeue(queue);
-			if (!first) break;
-			printf("Sending file of size %lu on connection %d\n", 
-				first->rcb->bytes_unsent, first->rcb->client_connection);
-			sjf_serve(first->rcb);
-            
-            /* Clean up request */
-			node_destroy(first);
-		} while (!queue_is_empty(queue));
-		printf("Queue is empty! Sleeping now.\n");
-	}
-}
-
 /**
  * Loops over a file, sending it in MAX_HTTP_SIZE chunks until the
  * client has received it in its entirety.
  */
-void sjf_serve(RCB *rcb) {
+RCB* sjf_serve(RCB *rcb) {
 	int len;
 	char *buffer = http_create_buffer(MAX_HTTP_SIZE);
 
@@ -43,7 +20,11 @@ void sjf_serve(RCB *rcb) {
 			}
 		}
 	} while(len == MAX_HTTP_SIZE);
+
 	free(buffer);
+    rcb_destroy(rcb);
+    sem_post(&permission_to_queue);
+    return NULL;
 }
 
 /**
@@ -51,9 +32,20 @@ void sjf_serve(RCB *rcb) {
  * queue in order of filesize (ascending).
  */
 void sjf_enqueue(RCB *rcb) {
-    queue_enqueue_priority(top_queue, rcb);
+    if (!rcb) return;
+
+    pthread_mutex_lock(&top_lock);
+        queue_enqueue_priority(top_queue, rcb);
+    pthread_mutex_unlock(&top_lock);
 }
 
-void sjf_dequeue() {
+/**
+ * Grab the RCB at the front of the only queue.
+ */
+RCB* sjf_dequeue() {
+    pthread_mutex_lock(&top_lock);
+        RCB *ready_to_serve = queue_dequeue(top_queue);
+    pthread_mutex_unlock(&top_lock);
 
+    return ready_to_serve;
 }

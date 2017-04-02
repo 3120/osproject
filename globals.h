@@ -16,8 +16,8 @@ pthread_mutex_t bottom_lock;
 
 sem_t permission_to_queue;
 
-void (*scheduler_enqueue)();
-void (*scheduler_dequeue)();
-void (*scheduler_serve)(RCB*);
+void (*scheduler_enqueue)(RCB*);
+RCB* (*scheduler_dequeue)();
+RCB* (*scheduler_serve)(RCB*);
 
 #endif

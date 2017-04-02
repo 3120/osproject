@@ -24,6 +24,7 @@ RCB* rcb_init(int client_connection) {
     }
 
     rcb->client_connection = client_connection;
+    rcb->requested_file = NULL;
     return rcb;
 }
 
@@ -48,7 +49,7 @@ bool rcb_process(RCB *rcb) {
         return false;
     } else {
         /* Open file, respond with "File Not Found" if impossible */
-        printf("%s", request);
+        printf("%s\n", request);
         FILE *requested_file = fopen(request, "r");
         if (!requested_file) {
             http_respond(404, rcb->client_connection, buffer);
@@ -102,7 +103,10 @@ bool rcb_completed(RCB *rcb) {
  */
 void rcb_destroy(RCB *rcb) {
     close(rcb->client_connection);
-    fclose(rcb->requested_file);
+    if (rcb->requested_file) {
+        perror("Destroying file link\n");
+        fclose(rcb->requested_file);
+    }
     free(rcb);
     rcb = NULL;
 }

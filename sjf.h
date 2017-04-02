@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void sjf_serve(RCB*);
+RCB* sjf_serve(RCB*);
 void sjf_enqueue(RCB*);
-void sjf_dequeue();
+RCB* sjf_dequeue();
 
 #endif

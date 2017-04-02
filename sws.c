@@ -1,4 +1,5 @@
 #include "sws.h"
+#include "rcb.h"
 
 int main( int argc, char **argv ) {
     /* Handle commandline args */
@@ -78,5 +79,31 @@ void set_thread_count(char *arg) {
 }
 
 void* worker_activity() {
+    while(true) {
+        pthread_mutex_lock(&work_lock);
+        RCB *next_in_line = queue_dequeue(work_queue);
+        pthread_mutex_unlock(&work_lock);
 
+        /* If there are requests in the work queue, validate and admit them */
+        if (next_in_line) {
+            /* On failed validation, free the position in line and destroy the RCB */
+            if (rcb_process(next_in_line)) {
+                scheduler_enqueue(next_in_line);
+                printf("Admitted to scheduler\n");
+            } else {
+                sem_post(&permission_to_queue);
+                rcb_destroy(next_in_line);
+            }
+        } else {
+            /* If there are requests in the ready queue, process them and return
+             * them to the queue if they still exist */
+            RCB *ready_for_serving = scheduler_dequeue();
+            if (ready_for_serving) {
+                ready_for_serving = scheduler_serve(ready_for_serving);
+                scheduler_enqueue(ready_for_serving);
+            } else {
+                /* Sleep until something changes */
+            }
+        }
+    }
 }
