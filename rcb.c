@@ -39,7 +39,7 @@ bool rcb_process(RCB *rcb) {
     /* Create read buffer */
     char *buffer = http_create_buffer(MAX_HTTP_SIZE);
     http_read_request(rcb->client_connection, buffer);
-    char *request = http_parse_request(rcb->client_connection, buffer);
+    char *request = http_parse_request(buffer);
 
     /* If request was malformed, respond with "Bad Request" */
     if (!request) {
