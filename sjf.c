@@ -9,9 +9,6 @@ void sjf_loop() {
 		network_wait();
 
 		do {
-			/* Handle incoming requests */
-            sjf_process_new_requests();
-
 			/* Process next in queue completely */
 			Node *first = queue_dequeue(queue);
 			if (!first) break;
@@ -53,13 +50,10 @@ void sjf_serve(RCB *rcb) {
  * At the beginning of every cycle, add any new requests to the
  * queue in order of filesize (ascending).
  */
-void sjf_process_new_requests() {
-    for(int conn = network_open(); conn >= 0; conn = network_open()) {
-        RCB *new_request = http_process_request(conn);
-        if (new_request) {
-            queue_enqueue_priority(queue, new_request);
-        } else {
-            close(conn);
-        }
-    }
+void sjf_enqueue(RCB *rcb) {
+    queue_enqueue_priority(top_queue, rcb);
+}
+
+void sjf_dequeue() {
+
 }

@@ -7,26 +7,9 @@
 #include "mlfb.h"
 
 void mlfb_loop() {
-	LinkedList *top_queue = list_init();
-	LinkedList *middle_queue = list_init();
-	LinkedList *bottom_queue = list_init();
-
 	for( ;; ) {
-		network_wait();
 
 		do {
-			/* At the beginning of every cycle, add any new requests to the
-			 * queue in order of filesize (ascending).
-			 */
-			for(int conn = network_open(); conn >= 0; conn = network_open()) {
-				RCB *new_request = http_process_request(conn);
-				if (new_request) {
-					list_insert_end(top_queue, new_request);
-				} else {
-					close(conn);
-				}
-			}
-
 			/* Determine which queue to read from, to add to, and
 			 * what size chunks to write in. */
 			int chunk;

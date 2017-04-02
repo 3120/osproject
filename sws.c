@@ -1,57 +1,63 @@
-/* 
- * File: sws.c
- * Author: Nicholas McDonald
- * Purpose: This file contains the implementation of a simple web server.
- *          It loads a scheduler based on a CLI flag and runs the server
- *          indefinitely. 
- */
+#include "sws.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "network.h"
-#include "http.h"
-#include "sjf.h"
-#include "rr.h"
-#include "mlfb.h"
-
-
-/* This function is where the program starts running.
- *    The function first parses its command line parameters to determine port #
- *    Then, it initializes, the network and enters the main loop.
- *    The main loop waits for a client (1 or more to connect, and then processes
- *    all clients by calling the seve_client() function for each one.
- * Parameters: 
- *             argc : number of command line parameters (including program name
- *             argv : array of pointers to command line parameters
- * Returns: an integer status code, 0 for success, something else for error.
- */
 int main( int argc, char **argv ) {
-  int port = -1;                                    /* server port # */
+    /* Handle commandline args */
+    int port = -1;
+    if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 )) {
+        printf( "usage: sws <port> <scheduler>\n" );
+        return 0;
+    }
 
-  /* check for and process parameters 
-   */
-  if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 )) {
-    printf( "usage: sws <port> <scheduler>\n" );
-    return 0;
-  }
+    if (!choose_scheduler(argv[2])) return 0;
 
-  char *flag = argv[2];
-  void (*scheduler_loop)(); 
-  if (strcmp(flag, "SJF") == 0) {
-    scheduler_loop = &sjf_loop;
-  } else if (strcmp(flag, "RR") == 0) {
-    scheduler_loop = &rr_loop;
-  } else if (strcmp(flag, "MLFB") == 0) {
-    /* scheduler_loop = &mlfb_loop; */
-  } else {
-    printf("Valid schedulers are SJF/RR/MLFB\n");
-    return 0;
-  }
+    /* Initialize thread-safety */
+    pthread_mutex_init(&work_lock, NULL);
+    pthread_mutex_init(&top_lock, NULL);
+    pthread_mutex_init(&middle_lock, NULL);
+    pthread_mutex_init(&bottom_lock, NULL);
+    network_init(port);
+    work_queue = queue_init();
+    sem_init(&permission_to_queue, 0, 100);
 
-  network_init( port );                             /* init network module */
+    /*
+     * Main loop. Always be checking for requests from the network. If a
+     * request is found, try to add it to the work queue. If no space is
+     * available in the queue, block until a slot opens.
+     */
+    while (true) {
+        int request = -1;
+        while (request == -1) request = network_open();
+        sem_wait(&permission_to_queue);
+        add_request(rcb_init(request));
+        close(request);
+    }
+}
 
-  (*scheduler_loop)();
+void add_request(RCB *rcb) {
+    pthread_mutex_lock(&work_lock);
+    queue_enqueue(work_queue, rcb);
+    pthread_mutex_unlock(&work_lock);
+}
+
+bool choose_scheduler(char *scheduler) {
+    if (strcmp(scheduler, "SJF") == 0) {
+        top_queue = queue_init();
+        scheduler_dequeue = &sjf_dequeue;
+        scheduler_enqueue = &sjf_enqueue;
+        scheduler_serve = &sjf_serve;
+    } else if (strcmp(scheduler, "RR") == 0) {
+        top_queue = queue_init();
+        scheduler_dequeue = &rr_dequeue;
+        scheduler_enqueue = &rr_enqueue;
+        scheduler_serve = &rr_serve;
+    } else if (strcmp(scheduler, "MLFB") == 0) {
+        top_queue = queue_init();
+        middle_queue = queue_init();
+        bottom_queue = queue_init();
+    } else {
+        printf("Valid schedulers are SJF/RR/MLFB\n");
+        return false;
+    }
+
+    return true;
 }

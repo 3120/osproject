@@ -19,7 +19,8 @@ RCB* rcb_init(int client_connection) {
 
     RCB *rcb = malloc(sizeof(RCB));
     if (!rcb) {
-        perror("Error while allocating memory"); abort();
+        perror("Error while allocating memory");
+        abort();
     }
 
     rcb->client_connection = client_connection;

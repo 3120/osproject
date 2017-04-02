@@ -1,7 +1,7 @@
 #ifndef MLFB_H
 #define MLFB_H
 
-#include "linked_list.h"
+#include "queue.h"
 #include "network.h"
 #include "rcb.h"
 #include "http.h"

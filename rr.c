@@ -3,24 +3,12 @@
 Queue *requests;
 
 void rr_loop() {
-	requests = queue_init();
-
-	for(;;) {
-        /* Wait until a new request comes in */
-		network_wait();
-
-		do {
-            /* Enqueue all new requests */
-            rr_process_new_requests();
-
-            /* Attempt to serve a request */
 			Node *next = queue_dequeue(requests);
 			printf("Sending file of size %lu\n", next->rcb->bytes_unsent);
 			rr_serve(next->rcb);
             
             /* Requeue the request, or remove it if complete */
             rr_finish_cycle(next);
-		} while (!queue_is_empty(requests));
 		printf("Queue is empty! Sleeping now.\n");
 	}
 }
@@ -30,15 +18,8 @@ void rr_loop() {
  * Round robin processes requests by simply adding them to the back
  * of the queue.
  */
-void rr_process_new_requests() {
-    for(int conn = network_open(); conn >= 0; conn = network_open()) {
-        RCB *new_request = http_process_request(conn);
-        if (new_request) {
-            queue_enqueue(requests, new_request);
-        } else {
-            close(conn);
-        }
-    }
+void rr_enqueue(RCB *request) {
+	queue_enqueue(top_queue, request);
 }
 
 
@@ -80,4 +61,8 @@ void rr_finish_cycle(Node *processed) {
         queue_enqueue(requests, processed->rcb);
         free(processed);
     }
+}
+
+void rr_dequeue() {
+
 }
