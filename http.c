@@ -11,40 +11,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-/* Take a file handle to an incoming connection. If the client has sent
- * 	a valid request, create a Request Control Block to represent the
- *	request and send a success response. Otherwise, send an error response.
- *
- *	Params:
- *		client connection as FileDescriptor
- *	Returns:
- *		Request control block as RCB*, or null if request failed
- */ 
-RCB* http_process_request(int client_connection) {
-	if (client_connection < 0) return NULL;
-	
-	RCB *block = NULL;
-	char *buffer = http_create_buffer(MAX_HTTP_SIZE);
-	http_read_request(client_connection, buffer);
-	char *request = http_parse_request(buffer);
-
-	if (!request) {
-		http_respond(400, client_connection, buffer);
-	} else {
-		FILE *requested_file = http_open_file(client_connection, request);
-		if (!requested_file) {
-			http_respond(404, client_connection, buffer);
-		} else {
-			/* Create a request control block to add to the service queue. */
-			block = rcb_init(client_connection, requested_file);
-			http_respond(200, client_connection, buffer);
-		}
-	}
-
-	free(buffer);
-	return block;
-}
-
 char* http_create_buffer(int chunk) {
 	char *buffer = malloc(chunk);
 	if(!buffer) {
@@ -63,7 +29,10 @@ void http_read_request(int client_connection, char *buffer) {
 	}
 }
 
-char* http_parse_request(int client_connection, char *buffer) {
+/**
+ * Brodsky obviously wrote this.
+ */
+char* http_parse_request(char *buffer) {
 	char *tmp, *brk, *req = NULL;
 
 	tmp = strtok_r( buffer, " ", &brk );
