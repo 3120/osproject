@@ -88,12 +88,16 @@ bool queue_enqueue_priority(Queue *queue, RCB *rcb) {
 	return false;
 }
 
-Node* queue_dequeue(Queue *queue) {
+RCB* queue_dequeue(Queue *queue) {
 	if (!queue || queue->head == NULL) return NULL;
 
 	Node *pop = queue->head;
 	queue->head = queue->head->next;
-	return pop;
+
+	RCB *request = pop->rcb;
+	pop->rcb = NULL;
+    node_destroy(pop);
+	return request;
 }
 
 bool queue_is_empty(Queue *queue) {
