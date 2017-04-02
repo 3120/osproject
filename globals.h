@@ -7,6 +7,8 @@
 
 Queue *top_queue, *middle_queue, *bottom_queue, *work_queue;
 
+int THREAD_COUNT;
+
 pthread_mutex_t work_lock;
 pthread_mutex_t top_lock;
 pthread_mutex_t middle_lock;

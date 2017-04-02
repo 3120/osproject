@@ -47,10 +47,6 @@ char* http_parse_request(char *buffer) {
 	return req;
 }
 
-FILE* http_open_file(int client_connection, char *requested_file) {
-    return fopen(requested_file, "r");
-}
-
 void http_respond(int error_code, int client_connection, char *buffer) {
 	int len;
 

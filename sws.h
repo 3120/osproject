@@ -16,6 +16,8 @@
 #include "globals.h"
 
 void add_request(RCB*);
-bool choose_scheduler(char*);
+void choose_scheduler(char*);
+void set_thread_count(char*);
+void* worker_activity();
 
 #endif

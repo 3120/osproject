@@ -3,12 +3,12 @@
 int main( int argc, char **argv ) {
     /* Handle commandline args */
     int port = -1;
-    if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 )) {
-        printf( "usage: sws <port> <scheduler>\n" );
+    if( ( argc < 4 ) || ( sscanf( argv[1], "%d", &port ) < 1 )) {
+        printf( "usage: sws <port> <scheduler> <thread_count>\n" );
         return 0;
     }
-
-    if (!choose_scheduler(argv[2])) return 0;
+    choose_scheduler(argv[2]);
+    set_thread_count(argv[3]);
 
     /* Initialize thread-safety */
     pthread_mutex_init(&work_lock, NULL);
@@ -19,17 +19,26 @@ int main( int argc, char **argv ) {
     work_queue = queue_init();
     sem_init(&permission_to_queue, 0, 100);
 
+    /* Initialize worker threads */
+    pthread_t workers[THREAD_COUNT];
+    for (int i = 0; i < THREAD_COUNT; i++) {
+        pthread_create(&workers[i], NULL, worker_activity, NULL);
+    }
+
     /*
      * Main loop. Always be checking for requests from the network. If a
      * request is found, try to add it to the work queue. If no space is
      * available in the queue, block until a slot opens.
      */
     while (true) {
+        printf("Hello.\n");
         int request = -1;
         while (request == -1) request = network_open();
         sem_wait(&permission_to_queue);
         add_request(rcb_init(request));
-        close(request);
+        int remaining = 0;
+        sem_getvalue(&permission_to_queue, &remaining);
+        printf("%d\n", remaining);
     }
 }
 
@@ -39,7 +48,7 @@ void add_request(RCB *rcb) {
     pthread_mutex_unlock(&work_lock);
 }
 
-bool choose_scheduler(char *scheduler) {
+void choose_scheduler(char *scheduler) {
     if (strcmp(scheduler, "SJF") == 0) {
         top_queue = queue_init();
         scheduler_dequeue = &sjf_dequeue;
@@ -56,8 +65,18 @@ bool choose_scheduler(char *scheduler) {
         bottom_queue = queue_init();
     } else {
         printf("Valid schedulers are SJF/RR/MLFB\n");
-        return false;
+        abort();
     }
+}
 
-    return true;
+void set_thread_count(char *arg) {
+    THREAD_COUNT = atoi(arg);
+    if (THREAD_COUNT < 1 || THREAD_COUNT > 100) {
+        perror("Error: thread count must be between 1-100\n");
+        abort();
+    }
+}
+
+void* worker_activity() {
+
 }

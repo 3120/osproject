@@ -10,7 +10,6 @@ void rr_loop() {
             /* Requeue the request, or remove it if complete */
             rr_finish_cycle(next);
 		printf("Queue is empty! Sleeping now.\n");
-	}
 }
 
 

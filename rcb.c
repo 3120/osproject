@@ -48,7 +48,8 @@ bool rcb_process(RCB *rcb) {
         return false;
     } else {
         /* Open file, respond with "File Not Found" if impossible */
-        FILE *requested_file = http_open_file(rcb->client_connection, request);
+        printf("%s", request);
+        FILE *requested_file = fopen(request, "r");
         if (!requested_file) {
             http_respond(404, rcb->client_connection, buffer);
             return false;
