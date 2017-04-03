@@ -1,5 +1,9 @@
 #include "mlfb.h"
 
+/**
+ * Place an RCB in an appropriate queue based on how many times
+ * the request has been processed without completion.
+ */
 void mlfb_enqueue(RCB *rcb) {
     if (!rcb) return;
 
@@ -10,6 +14,10 @@ void mlfb_enqueue(RCB *rcb) {
     }
 }
 
+/**
+ * Grab an RCB from one of the three queues, prioritizing those
+ * requests that have been processed fewer times.
+ */
 RCB* mlfb_dequeue() {
     RCB *next_in_line = NULL;
 
@@ -39,30 +47,7 @@ RCB* mlfb_dequeue() {
 RCB* mlfb_serve(RCB *rcb) {
     /* Determine size to send from file priority */
     int send_length = (rcb->chunks_served == 0) ? CHUNK_8KB : CHUNK_64KB;
-    int len;
-    char *buffer = http_create_buffer(send_length);
+    http_write_to_client(rcb, send_length);
 
-	len = fread( buffer, 1, send_length, rcb->requested_file );
-	if( len < 0 ) {
-		perror( "Error while writing to client" );
-	} else if( len > 0 ) {
-		len = write( rcb->client_connection, buffer, len );
-		if( len < 1 ) {
-			perror( "Error while writing to client" );
-		} else {
-			rcb_update_record(rcb, send_length);
-		}
-	}
-
-	free(buffer);
-
-    /* If the request has been fulfilled, destroy the RCB; otherwise return
-    * it to the queue */
-    if (rcb_completed(rcb)) {
-        rcb_destroy(rcb);
-        sem_post(&permission_to_queue);
-        return NULL;
-    } else {
-        return rcb;
-    }
+    return rcb;
 }

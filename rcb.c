@@ -6,6 +6,7 @@
  *		used in abstracted code segments.
  */
 #include "rcb.h"
+#include "http.h"
 
 /**
  * Create a Request Control Block to associate with an incoming request.
@@ -24,6 +25,7 @@ RCB* rcb_init(int client_connection) {
     }
 
     rcb->client_connection = client_connection;
+    rcb->filename = NULL;
     rcb->requested_file = NULL;
     rcb->chunks_served = 0;
     return rcb;
@@ -50,13 +52,14 @@ bool rcb_process(RCB *rcb) {
         return false;
     } else {
         /* Open file, respond with "File Not Found" if impossible */
-        printf("%s\n", request);
         FILE *requested_file = fopen(request, "r");
         if (!requested_file) {
             http_respond(404, rcb->client_connection, buffer);
             return false;
         } else {
             /* Assign the file descriptor to the request and respond "Ok" */
+            rcb->filename = malloc(sizeof(request));
+            strcpy(rcb->filename, request);
             rcb->requested_file = requested_file;
             rcb->bytes_unsent = rcb_get_filesize(requested_file);
             http_respond(200, rcb->client_connection, buffer);
@@ -106,9 +109,9 @@ bool rcb_completed(RCB *rcb) {
 void rcb_destroy(RCB *rcb) {
     close(rcb->client_connection);
     if (rcb->requested_file) {
-        perror("Destroying file link\n");
         fclose(rcb->requested_file);
     }
+    free(rcb->filename);
     free(rcb);
     rcb = NULL;
 }

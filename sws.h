@@ -19,5 +19,6 @@ void add_request(RCB*);
 void choose_scheduler(char*);
 void set_thread_count(char*);
 void* worker_activity();
+RCB* worker_check_completed(RCB*);
 
 #endif

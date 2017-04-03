@@ -1,4 +1,5 @@
 #include "sws.h"
+#include "rcb.h"
 
 int main( int argc, char **argv ) {
     /* Handle commandline args */
@@ -39,13 +40,6 @@ int main( int argc, char **argv ) {
     }
 }
 
-void add_request(RCB *rcb) {
-    pthread_mutex_lock(&work_lock);
-        queue_enqueue(work_queue, rcb);
-        pthread_cond_signal(&request_wait);
-    pthread_mutex_unlock(&work_lock);
-}
-
 void choose_scheduler(char *scheduler) {
     if (strcmp(scheduler, "SJF") == 0) {
         top_queue = queue_init();
@@ -78,8 +72,16 @@ void set_thread_count(char *arg) {
     }
 }
 
+void add_request(RCB *rcb) {
+    pthread_mutex_lock(&work_lock);
+        queue_enqueue(work_queue, rcb);
+        pthread_cond_signal(&request_wait);
+    pthread_mutex_unlock(&work_lock);
+}
+
 void* worker_activity() {
     while(true) {
+        /* Check the work queue first */
         RCB *waiting_for_processing = NULL;
         pthread_mutex_lock(&work_lock);
             waiting_for_processing = queue_dequeue(work_queue);
@@ -89,8 +91,9 @@ void* worker_activity() {
         if (waiting_for_processing) {
             /* On failed validation, free the position in line and destroy the RCB */
             if (rcb_process(waiting_for_processing)) {
+                printf("Request for file %s admitted\n", waiting_for_processing->filename);
+                fflush(stdout);
                 scheduler_enqueue(waiting_for_processing);
-                printf("Admitted to scheduler\n");
             } else {
                 sem_post(&permission_to_queue);
                 rcb_destroy(waiting_for_processing);
@@ -98,19 +101,33 @@ void* worker_activity() {
         } else {
             /* If there are requests in the ready queue, process them and return
              * them to the queue if they still exist */
-            RCB *ready_for_serving = scheduler_dequeue();
-            if (ready_for_serving) {
-                ready_for_serving = scheduler_serve(ready_for_serving);
-                scheduler_enqueue(ready_for_serving);
+            RCB *ready = scheduler_dequeue();
+            if (ready) {
+                ready = scheduler_serve(ready);
+                /* If the request was completed, destroy the RCB and write about it. */
+                ready = worker_check_completed(ready);
+                /* Requeue the RCB, if it wasn't finished */
+                scheduler_enqueue(ready);
             } else {
                 /* Sleep until a request appears */
                 pthread_mutex_lock(&work_lock);
                     while (queue_is_empty(work_queue)) {
-                        printf("Sleeping now...\n");
                         pthread_cond_wait(&request_wait, &work_lock);
                     }
                 pthread_mutex_unlock(&work_lock);
             }
         }
+    }
+}
+
+RCB* worker_check_completed(RCB *rcb) {
+    if (rcb_completed(rcb)) {
+        printf("Request for file %s completed\n", rcb->filename);
+        fflush(stdout);
+        rcb_destroy(rcb);
+        sem_post(&permission_to_queue);
+        return NULL;
+    } else {
+        return rcb;
     }
 }

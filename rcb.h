@@ -6,10 +6,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "http.h"
 
 typedef struct {
 	int client_connection;
+    char *filename;
 	FILE *requested_file;
 	unsigned long bytes_unsent;
     unsigned int chunks_served;

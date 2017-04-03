@@ -6,6 +6,7 @@
  *		http_process_request should be considered "public".
  */
 #include "http.h"
+#include "rcb.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -19,6 +20,29 @@ char* http_create_buffer(int chunk) {
 	}
 
 	return buffer;
+}
+
+void http_write_to_client(RCB *rcb, int chunk_size) {
+    /* Read up to the maximum size into the write buffer. */
+    char *buffer = http_create_buffer(chunk_size);
+    int len = fread( buffer, 1, chunk_size, rcb->requested_file );
+    if( len < 0 ) {
+        perror( "Error while writing to client" );
+    } else if( len > 0 ) {
+        /* Transmit the buffer contents to the client */
+        len = write( rcb->client_connection, buffer, len );
+        if( len < 1 ) {
+            perror( "Error while writing to client" );
+        } else {
+            /* Reflect the transmission in the RCB */
+            rcb_update_record(rcb, chunk_size);
+            printf("Sent %d bytes of file %s\n", len, rcb->filename);
+            fflush(stdout);
+        }
+    }
+
+    /* Clear the buffer for the next transfer. */
+    free(buffer);
 }
 
 void http_read_request(int client_connection, char *buffer) {

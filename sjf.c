@@ -1,33 +1,6 @@
 #include "sjf.h"
 
 /**
- * Loops over a file, sending it in MAX_HTTP_SIZE chunks until the
- * client has received it in its entirety.
- */
-RCB* sjf_serve(RCB *rcb) {
-	int len;
-	char *buffer = http_create_buffer(MAX_HTTP_SIZE);
-
-    /* Send chunks until complete */
-	do {
-		len = fread( buffer, 1, MAX_HTTP_SIZE, rcb->requested_file );
-		if( len < 0 ) {
-			perror( "Error while writing to client" );
-		} else if( len > 0 ) {
-			len = write( rcb->client_connection, buffer, len );
-			if( len < 1 ) {
-				perror( "Error while writing to client" );
-			}
-		}
-	} while(len == MAX_HTTP_SIZE);
-
-	free(buffer);
-    rcb_destroy(rcb);
-    sem_post(&permission_to_queue);
-    return NULL;
-}
-
-/**
  * At the beginning of every cycle, add any new requests to the
  * queue in order of filesize (ascending).
  */
@@ -48,4 +21,16 @@ RCB* sjf_dequeue() {
     pthread_mutex_unlock(&top_lock);
 
     return ready_to_serve;
+}
+
+/**
+ * Loops over a file, sending it in 8KB chunks until the
+ * client has received it in its entirety. We can spot
+ */
+RCB* sjf_serve(RCB *rcb) {
+    while (!rcb_completed(rcb)) {
+        http_write_to_client(rcb, CHUNK_8KB);
+    }
+
+    return rcb;
 }
