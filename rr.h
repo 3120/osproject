@@ -10,9 +10,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-void rr_serve(RCB *rcb);
+RCB* rr_serve(RCB*);
 void rr_enqueue(RCB *rcb);
-void rr_dequeue();
-void rr_finish_cycle(Node *processed);
+RCB* rr_dequeue();
 
 #endif

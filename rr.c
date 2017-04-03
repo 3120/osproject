@@ -1,31 +1,22 @@
 #include "rr.h"
 
-Queue *requests;
-
-void rr_loop() {
-			Node *next = queue_dequeue(requests);
-			printf("Sending file of size %lu\n", next->rcb->bytes_unsent);
-			rr_serve(next->rcb);
-            
-            /* Requeue the request, or remove it if complete */
-            rr_finish_cycle(next);
-		printf("Queue is empty! Sleeping now.\n");
-}
-
-
 /**
  * Round robin processes requests by simply adding them to the back
  * of the queue.
  */
 void rr_enqueue(RCB *request) {
-	queue_enqueue(top_queue, request);
+	if (!request) return;
+
+    pthread_mutex_lock(&top_lock);
+        queue_enqueue(top_queue, request);
+    pthread_mutex_unlock(&top_lock);
 }
 
 
 /**
  * Send a block of a requested file to the client.
  */
-void rr_serve(RCB *rcb) {
+RCB* rr_serve(RCB *rcb) {
 	int len;
 	char *buffer = http_create_buffer(MAX_HTTP_SIZE);
 
@@ -45,23 +36,26 @@ void rr_serve(RCB *rcb) {
 	}
 
     /* Clear the buffer for the next transfer. */
-	free(buffer);
-}
+    free(buffer);
 
-
-/**
- * After every attempt to send, we check if there's still work
- * left for the just-processed job
- */
-void rr_finish_cycle(Node *processed) {
-    if (rcb_completed(processed->rcb)) {
-        node_destroy(processed);
+    /* If the request has been fulfilled, destroy the RCB; otherwise return
+     * it to the queue */
+    if (rcb_completed(rcb)) {
+        rcb_destroy(rcb);
+        sem_post(&permission_to_queue);
+        return NULL;
     } else {
-        queue_enqueue(requests, processed->rcb);
-        free(processed);
+        return rcb;
     }
 }
 
-void rr_dequeue() {
+/**
+ * Retrieve the RCB from the front of the queue
+ */
+RCB* rr_dequeue() {
+    pthread_mutex_lock(&top_lock);
+        RCB *ready_to_serve = queue_dequeue(top_queue);
+    pthread_mutex_unlock(&top_lock);
 
+    return ready_to_serve;
 }
