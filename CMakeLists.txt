@@ -20,7 +20,9 @@ set(SOURCE_FILES
         http.c
         http.h
         sws.h
-        globals.h)
+        globals.h
+        mlfb.h
+        mlfb.c)
 
 find_package(Threads REQUIRED)
 add_executable(osproj ${SOURCE_FILES})

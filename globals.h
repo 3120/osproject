@@ -13,6 +13,7 @@ pthread_mutex_t work_lock;
 pthread_mutex_t top_lock;
 pthread_mutex_t middle_lock;
 pthread_mutex_t bottom_lock;
+pthread_cond_t request_wait;
 
 sem_t permission_to_queue;
 

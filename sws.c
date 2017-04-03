@@ -15,6 +15,7 @@ int main( int argc, char **argv ) {
     pthread_mutex_init(&top_lock, NULL);
     pthread_mutex_init(&middle_lock, NULL);
     pthread_mutex_init(&bottom_lock, NULL);
+    pthread_cond_init(&request_wait, NULL);
     network_init(port);
     work_queue = queue_init();
     sem_init(&permission_to_queue, 0, 100);
@@ -31,20 +32,17 @@ int main( int argc, char **argv ) {
      * available in the queue, block until a slot opens.
      */
     while (true) {
-        printf("Hello.\n");
         int request = -1;
         while (request == -1) request = network_open();
         sem_wait(&permission_to_queue);
         add_request(rcb_init(request));
-        int remaining = 0;
-        sem_getvalue(&permission_to_queue, &remaining);
-        printf("%d\n", remaining);
     }
 }
 
 void add_request(RCB *rcb) {
     pthread_mutex_lock(&work_lock);
-    queue_enqueue(work_queue, rcb);
+        queue_enqueue(work_queue, rcb);
+        pthread_cond_signal(&request_wait);
     pthread_mutex_unlock(&work_lock);
 }
 
@@ -82,8 +80,9 @@ void set_thread_count(char *arg) {
 
 void* worker_activity() {
     while(true) {
+        RCB *waiting_for_processing = NULL;
         pthread_mutex_lock(&work_lock);
-        RCB *waiting_for_processing = queue_dequeue(work_queue);
+            waiting_for_processing = queue_dequeue(work_queue);
         pthread_mutex_unlock(&work_lock);
 
         /* If there are requests in the work queue, validate and admit them */
@@ -104,7 +103,13 @@ void* worker_activity() {
                 ready_for_serving = scheduler_serve(ready_for_serving);
                 scheduler_enqueue(ready_for_serving);
             } else {
-                /* Sleep until something changes */
+                /* Sleep until a request appears */
+                pthread_mutex_lock(&work_lock);
+                    while (queue_is_empty(work_queue)) {
+                        printf("Sleeping now...\n");
+                        pthread_cond_wait(&request_wait, &work_lock);
+                    }
+                pthread_mutex_unlock(&work_lock);
             }
         }
     }
