@@ -25,6 +25,7 @@ RCB* rcb_init(int client_connection) {
 
     rcb->client_connection = client_connection;
     rcb->requested_file = NULL;
+    rcb->chunks_served = 0;
     return rcb;
 }
 
@@ -82,7 +83,8 @@ unsigned long rcb_get_filesize(FILE *file) {
  * @param sent  Amount of data sent in the previous transmission
  */
 void rcb_update_record(RCB *rcb, int sent) {
-	if (rcb->bytes_unsent < sent) {
+	rcb->chunks_served++;
+    if (rcb->bytes_unsent < sent) {
 		rcb->bytes_unsent = 0;
 	} else {
 		rcb->bytes_unsent -= sent;

@@ -12,6 +12,7 @@ typedef struct {
 	int client_connection;
 	FILE *requested_file;
 	unsigned long bytes_unsent;
+    unsigned int chunks_served;
 } RCB;
 
 RCB* rcb_init(int client_connection);

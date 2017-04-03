@@ -63,6 +63,9 @@ void choose_scheduler(char *scheduler) {
         top_queue = queue_init();
         middle_queue = queue_init();
         bottom_queue = queue_init();
+        scheduler_dequeue = &mlfb_dequeue;
+        scheduler_enqueue = &mlfb_enqueue;
+        scheduler_serve = &mlfb_serve;
     } else {
         printf("Valid schedulers are SJF/RR/MLFB\n");
         abort();

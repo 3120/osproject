@@ -1,59 +1,48 @@
-/* 
- * File: mlfb.c
- * Author: Nicholas McDonald
- * Purpose: This file contains the server functions related to the multi-
- * 		level queue with feedback scheduling algorithm. 
- */
 #include "mlfb.h"
 
-void mlfb_loop() {
-	for( ;; ) {
+void mlfb_enqueue(RCB *rcb) {
+    if (!rcb) return;
 
-		do {
-			/* Determine which queue to read from, to add to, and
-			 * what size chunks to write in. */
-			int chunk;
-			LinkedList *current_queue = NULL, *next_queue = NULL;
-			char *queue_name; 
-			if (!list_is_empty(top_queue)) {
-				current_queue = top_queue, next_queue = middle_queue;
-				chunk = CHUNK_8KB, queue_name = "TOP";
-			} else if (!list_is_empty(middle_queue)) {
-				current_queue = middle_queue, next_queue = bottom_queue;
-				chunk = CHUNK_64KB, queue_name = "MID";
-			} else {
-				current_queue = bottom_queue, next_queue = bottom_queue;
-				chunk = CHUNK_64KB, queue_name = "BOT";
-			}
+    switch (rcb->chunks_served) {
+        case 0: queue_enqueue(top_queue, rcb); break;
+        case 1: queue_enqueue(middle_queue, rcb); break;
+        default: queue_enqueue(bottom_queue, rcb); break;
+    }
+}
 
-			/* Send up to chunk bytes of the next-in-line file */
-			node *next = NULL;
-			next = list_pop(current_queue);
-			printf("Sending file of size %lu from %s on connection %d\n", 
-					next->rcb->bytes_unsent, queue_name, 
-					next->rcb->client_connection);
-			mlfb_serve(next->rcb, chunk);
-			if (rcb_completed(next->rcb)) {
-				node_destroy(next);
-			} else {
-				list_insert_end(next_queue, next->rcb);
-				free(next);
-			}
-		} while (!list_is_empty(top_queue) || !list_is_empty(middle_queue)
-				|| !list_is_empty(bottom_queue));
-		printf("Queue is empty! Sleeping now.\n");
-	}
+RCB* mlfb_dequeue() {
+    RCB *next_in_line = NULL;
+
+    /* Pull from high-priority queue if possible */
+    pthread_mutex_lock(&top_lock);
+        if (!queue_is_empty(top_queue)) next_in_line = queue_dequeue(top_queue);
+    pthread_mutex_unlock(&top_lock);
+    if (next_in_line) return next_in_line;
+
+    /* Pull from mid-priority queue if top is empty */
+    pthread_mutex_lock(&middle_lock);
+        if (!queue_is_empty(middle_queue)) next_in_line = queue_dequeue(middle_queue);
+    pthread_mutex_unlock(&middle_lock);
+    if (next_in_line) return next_in_line;
+
+    /* Otherwise look in the round-robin queue */
+    pthread_mutex_lock(&bottom_lock);
+        if (!queue_is_empty(bottom_queue)) next_in_line = queue_dequeue(bottom_queue);
+    pthread_mutex_unlock(&bottom_lock);
+    return next_in_line;
 }
 
 /**
  * Sends a portion of the requested file, based on the queue the request
  * block currently resides in.
  */
-void mlfb_serve(RCB *rcb, int chunk) {
-	int len;
-	char *buffer = http_create_buffer(chunk);
+RCB* mlfb_serve(RCB *rcb) {
+    /* Determine size to send from file priority */
+    int send_length = (rcb->chunks_served == 0) ? CHUNK_8KB : CHUNK_64KB;
+    int len;
+    char *buffer = http_create_buffer(send_length);
 
-	len = fread( buffer, 1, chunk, rcb->requested_file );
+	len = fread( buffer, 1, send_length, rcb->requested_file );
 	if( len < 0 ) {
 		perror( "Error while writing to client" );
 	} else if( len > 0 ) {
@@ -61,9 +50,19 @@ void mlfb_serve(RCB *rcb, int chunk) {
 		if( len < 1 ) {
 			perror( "Error while writing to client" );
 		} else {
-			rcb_update_record(rcb, chunk);
+			rcb_update_record(rcb, send_length);
 		}
 	}
 
 	free(buffer);
+
+    /* If the request has been fulfilled, destroy the RCB; otherwise return
+    * it to the queue */
+    if (rcb_completed(rcb)) {
+        rcb_destroy(rcb);
+        sem_post(&permission_to_queue);
+        return NULL;
+    } else {
+        return rcb;
+    }
 }

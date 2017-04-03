@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 RCB* rr_serve(RCB*);
-void rr_enqueue(RCB *rcb);
+void rr_enqueue(RCB*);
 RCB* rr_dequeue();
 
 #endif
