@@ -6,6 +6,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 typedef struct {
 	int client_connection;
@@ -21,5 +24,6 @@ unsigned long rcb_get_filesize(FILE *file);
 void rcb_update_record(RCB *rcb, int sent);
 bool rcb_completed(RCB *rcb);
 void rcb_destroy(RCB *rcb);
+bool rcb_is_valid_file(RCB*);
 
 #endif

@@ -81,6 +81,8 @@ void http_respond(int error_code, int client_connection, char *buffer) {
 			break;
 		case 200: len = sprintf(buffer, "HTTP/1.1 200 OK\n\n");
 			break;
+		case 403: len = sprintf(buffer, "HTTP/1.1 403 Forbidden\n\n");
+			break;
 	}
 
 	write(client_connection, buffer, len);
