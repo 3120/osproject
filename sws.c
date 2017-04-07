@@ -5,8 +5,12 @@ int main( int argc, char **argv ) {
     /* Handle commandline args */
     int port = -1;
     if( ( argc < 4 ) || ( sscanf( argv[1], "%d", &port ) < 1 )) {
-        printf( "usage: sws <port> <scheduler> <thread_count>\n" );
+        printf( "usage: sws <port> <scheduler> <thread_count> <cache_size>\n" );
         return 0;
+    }
+    
+    if ( argc == 5){
+        cache_init(argv[4]);
     }
     choose_scheduler(argv[2]);
     set_thread_count(argv[3]);

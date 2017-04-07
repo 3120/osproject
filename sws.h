@@ -14,6 +14,7 @@
 #include "rr.h"
 #include "mlfb.h"
 #include "globals.h"
+#include "cache.h"
 
 void add_request(RCB*);
 void choose_scheduler(char*);
