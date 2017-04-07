@@ -57,6 +57,12 @@ bool rcb_process(RCB *rcb) {
             http_respond(404, rcb->client_connection, buffer);
             return false;
         } else {
+            /* Prevent requests for non-regular files */
+            if (!rcb_is_valid_file(requested_file)) {
+                http_respond(403, rcb->client_connection, buffer);
+                return false;
+            }
+
             /* Assign the file descriptor to the request and respond "Ok" */
             rcb->filename = malloc(sizeof(request));
             strcpy(rcb->filename, request);
@@ -114,4 +120,10 @@ void rcb_destroy(RCB *rcb) {
     free(rcb->filename);
     free(rcb);
     rcb = NULL;
+}
+
+bool rcb_is_valid_file(FILE *requested_file) {
+    struct stat file_stat;
+    fstat(fileno(requested_file), &file_stat);
+    return S_ISREG(file_stat.st_mode);
 }

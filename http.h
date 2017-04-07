@@ -6,7 +6,10 @@
 #define CHUNK_64KB 65536
 
 #include <stdio.h>
+#include <string.h>
 #include "rcb.h"
+
+extern char *strtok_r(char *, const char *, char **);
 
 void http_read_request(int client_connection, char *buffer);
 char* http_parse_request(char*);

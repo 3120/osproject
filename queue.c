@@ -5,7 +5,7 @@ Queue* queue_init() {
 	Queue *new_queue = malloc(sizeof(Queue));
 
 	if (new_queue) {
-		new_queue->head = NULL;
+		new_queue->head = new_queue->tail = NULL;
 	} else {
 		perror("Error while allocating memory");
 		abort();
@@ -36,13 +36,10 @@ void queue_enqueue(Queue *queue, RCB *rcb) {
 	Node *new_node = node_init(rcb);
 
 	if (queue_is_empty(queue)) {
-		queue->head = new_node;
+		queue->head = queue->tail = new_node;
 	} else {
-		Node *current_end = queue->head;
-		while (current_end->next) {
-			current_end = current_end->next;
-		}
-		current_end->next = new_node;
+		queue->tail->next = new_node;
+        queue->tail = new_node;
 	}
 }
 

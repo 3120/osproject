@@ -7,6 +7,7 @@
 
 typedef struct {
 	Node *head;
+	Node *tail;
 } Queue;
 
 Queue* queue_init();
