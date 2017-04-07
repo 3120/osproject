@@ -24,6 +24,6 @@ unsigned long rcb_get_filesize(FILE *file);
 void rcb_update_record(RCB *rcb, int sent);
 bool rcb_completed(RCB *rcb);
 void rcb_destroy(RCB *rcb);
-bool rcb_is_valid_file(RCB*);
+bool rcb_is_valid_file(FILE*);
 
 #endif

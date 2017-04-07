@@ -58,7 +58,7 @@ bool rcb_process(RCB *rcb) {
             return false;
         } else {
             /* Prevent requests for non-regular files */
-            if (!rcb_is_valid_file(rcb)) {
+            if (!rcb_is_valid_file(requested_file)) {
                 http_respond(403, rcb->client_connection, buffer);
                 return false;
             }
@@ -122,8 +122,8 @@ void rcb_destroy(RCB *rcb) {
     rcb = NULL;
 }
 
-bool rcb_is_valid_file(RCB *rcb) {
-    struct stat path_stat;
-    stat(rcb->filename, &path_stat);
-    return S_ISREG(path_stat.st_mode);
+bool rcb_is_valid_file(FILE *requested_file) {
+    struct stat file_stat;
+    fstat(fileno(requested_file), &file_stat);
+    return S_ISREG(file_stat.st_mode);
 }
